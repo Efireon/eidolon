@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:14-alpine
+    container_name: eidolon-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: eidolon
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - eidolon-network
+
+  # Eidolon VPN сервер
+  eidolon:
+    build:
+      context: ..
+      dockerfile: docker/server.Dockerfile
+    container_name: eidolon-vpn
+    restart: unless-stopped
+    privileged: true  # Необходимо для сетевых возможностей
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "443:443"
+    volumes:
+      - ../configs:/app/configs
+      - ../certs:/app/certs
+      - ../logs:/app/logs
+    depends_on:
+      - postgres
+    networks:
+      - eidolon-network
+    command: ["/app/eidolon", "-config", "/app/configs/config.yaml"]
+
+networks:
+  eidolon-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
