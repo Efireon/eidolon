@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"time"
 
+	"eidolon/internal/models"
+	"eidolon/internal/repository"
+
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/yourusername/eidolon/internal/models"
-	"github.com/yourusername/eidolon/internal/repository"
 )
 
 // Ошибки сервиса аутентификации

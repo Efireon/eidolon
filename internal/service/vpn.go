@@ -6,10 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"eidolon/internal/models"
+	"eidolon/internal/repository"
+	"eidolon/internal/vpn"
+
 	"github.com/sirupsen/logrus"
-	"github.com/yourusername/eidolon/internal/models"
-	"github.com/yourusername/eidolon/internal/repository"
-	"github.com/yourusername/eidolon/internal/vpn"
 )
 
 // VPNService предоставляет методы для управления VPN

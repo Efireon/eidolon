@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/eidolon/internal/models"
-	"github.com/yourusername/eidolon/internal/repository"
+	"eidolon/internal/models"
+	"eidolon/internal/repository"
 )
 
 // InviteService предоставляет методы для управления инвайт-кодами

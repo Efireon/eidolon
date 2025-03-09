@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"eidolon/internal/models"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Драйвер PostgreSQL
-	"github.com/yourusername/eidolon/internal/models"
 )
 
 // PostgresRepository реализует интерфейс Repository для PostgreSQL

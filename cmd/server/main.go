@@ -10,12 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	"eidolon/internal/bot"
+	"eidolon/internal/config"
+	"eidolon/internal/repository"
+	"eidolon/internal/service"
+	"eidolon/internal/vpn"
+
 	"github.com/sirupsen/logrus"
-	"github.com/yourusername/eidolon/internal/bot"
-	"github.com/yourusername/eidolon/internal/config"
-	"github.com/yourusername/eidolon/internal/repository"
-	"github.com/yourusername/eidolon/internal/service"
-	"github.com/yourusername/eidolon/internal/vpn"
 )
 
 var (

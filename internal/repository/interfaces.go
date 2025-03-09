@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/yourusername/eidolon/internal/models"
+	"eidolon/internal/models"
 )
 
 // UserRepository определяет интерфейс для работы с пользователями

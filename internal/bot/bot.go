@@ -6,10 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"eidolon/internal/models"
+	"eidolon/internal/service"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sirupsen/logrus"
-	"github.com/yourusername/eidolon/internal/models"
-	"github.com/yourusername/eidolon/internal/service"
 )
 
 // TelegramBot представляет бота для управления VPN через Telegram
