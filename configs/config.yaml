@@ -1,0 +1,42 @@
+# Пример конфигурационного файла для Eidolon VPN
+
+# Уровень логирования (debug, info, warn, error)
+logLevel: "info"
+
+# Настройки базы данных
+database:
+  connectionString: "postgres://postgres:postgres@localhost:5432/eidolon?sslmode=disable"
+
+# Настройки JWT токенов
+jwt:
+  secret: "your-secret-key-here"
+  expiryMinutes: 1440  # 24 часа
+
+# Настройки VPN
+vpn:
+  listenIP: "0.0.0.0"
+  listenPort: 443
+  certDirectory: "certs"
+  caCommonName: "Eidolon VPN CA"
+  serverCommonName: "vpn.example.com"
+  organization: "Eidolon VPN"
+  country: "RU"
+  defaultRoutes:
+    - "192.168.0.0/16"
+    - "10.0.0.0/8"
+  defaultASNRoutes:
+    - 12345
+    - 67890
+
+# Настройки Telegram бота
+telegram:
+  token: "your-telegram-bot-token-here"
+  adminIDs:
+    - 123456789  # Telegram ID администратора
+
+# Настройки API
+api:
+  listenAddr: "127.0.0.1:8080"
+  readTimeout: 10       # секунды
+  writeTimeout: 10      # секунды
+  shutdownTimeout: 10   # секунды

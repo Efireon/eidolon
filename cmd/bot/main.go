@@ -13,6 +13,7 @@ import (
 	"eidolon/internal/config"
 	"eidolon/internal/repository"
 	"eidolon/internal/service"
+	"eidolon/internal/vpn"
 	"eidolon/pkg/logger"
 )
 
@@ -54,16 +55,47 @@ func main() {
 	}
 	defer repo.Close()
 
+	// Создаем менеджер сертификатов
+	certManager, err := vpn.NewCertificateManager(cfg.VPN.CertDirectory)
+	if err != nil {
+		log.Fatalf("Failed to create certificate manager: %v", err)
+	}
+
+	// Загружаем или создаем CA сертификат
+	err = certManager.LoadOrCreateCA(vpn.CertOptions{
+		CommonName:   cfg.VPN.CACommonName,
+		Organization: cfg.VPN.Organization,
+		Country:      cfg.VPN.Country,
+		ValidForDays: 3650, // 10 лет
+	})
+	if err != nil {
+		log.Fatalf("Failed to load or create CA certificate: %v", err)
+	}
+
+	// Создаем VPN сервер
+	vpnServer := vpn.NewOpenConnectServer(
+		vpn.WithListenIP(cfg.VPN.ListenIP),
+		vpn.WithListenPort(cfg.VPN.ListenPort),
+		vpn.WithCertificate(
+			certManager.GetServerCertFilePath(),
+			certManager.GetServerKeyFilePath(),
+		),
+		vpn.WithCA(certManager.GetCAFilePath()),
+		vpn.WithLogger(log),
+	)
+
 	// Создаем сервисы
 	authService := service.NewAuthService(repo, cfg.JWT.Secret, time.Duration(cfg.JWT.ExpiryMinutes)*time.Minute)
 	inviteService := service.NewInviteService(repo)
+	vpnService := service.NewVPNService(repo, vpnServer, certManager, log, cfg.VPN.DefaultRoutes, cfg.VPN.DefaultASNRoutes)
 
 	// Создаем Telegram бота
 	telegramBot, err := bot.NewTelegramBot(
 		cfg.Telegram.Token,
 		authService,
 		inviteService,
-		repo,
+		vpnService,
+		repo, // Передаем репозиторий
 		log,
 		cfg.Telegram.AdminIDs,
 	)

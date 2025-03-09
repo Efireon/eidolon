@@ -43,7 +43,6 @@ func NewServer(
 
 	// Настраиваем маршруты
 	// Оборачиваем все маршруты в CORS-middleware
-	corsRouter := WithCORS(router)
 
 	// Публичные маршруты
 	router.HandleFunc("/api/auth/register", handler.RegisterUser)

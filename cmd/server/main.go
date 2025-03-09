@@ -103,6 +103,7 @@ func main() {
 		authService,
 		inviteService,
 		vpnService,
+		repo, // Добавлен репозиторий как аргумент
 		logger,
 		cfg.Telegram.AdminIDs,
 	)

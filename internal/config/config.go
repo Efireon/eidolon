@@ -14,6 +14,15 @@ type Config struct {
 	JWT      JWTConfig      `yaml:"jwt"`
 	VPN      VPNConfig      `yaml:"vpn"`
 	Telegram TelegramConfig `yaml:"telegram"`
+	API      APIConfig      `yaml:"api"`
+}
+
+// APIConfig содержит настройки API сервера
+type APIConfig struct {
+	ListenAddr      string `yaml:"listenAddr"`
+	ReadTimeout     int    `yaml:"readTimeout"`
+	WriteTimeout    int    `yaml:"writeTimeout"`
+	ShutdownTimeout int    `yaml:"shutdownTimeout"`
 }
 
 // DatabaseConfig содержит настройки базы данных

@@ -202,3 +202,12 @@ func (s *AuthService) CheckUserPermission(userRole models.RoleType, requiredRole
 		return false
 	}
 }
+
+// GetUserByID получает пользователя по его ID
+func (s *AuthService) GetUserByID(ctx context.Context, userID int64) (*models.User, error) {
+	user, err := s.repo.User().GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by ID: %w", err)
+	}
+	return user, nil
+}

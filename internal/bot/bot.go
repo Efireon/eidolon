@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"eidolon/internal/models"
+	"eidolon/internal/repository"
 	"eidolon/internal/service"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -20,7 +21,8 @@ type TelegramBot struct {
 	inviteService *service.InviteService
 	vpnService    *service.VPNService
 	logger        *logrus.Logger
-	admins        []int64 // Список Telegram ID администраторов для первоначальной настройки
+	admins        []int64               // Список Telegram ID администраторов для первоначальной настройки
+	repo          repository.Repository // Добавляем репозиторий
 }
 
 // NewTelegramBot создает нового Telegram бота
@@ -29,6 +31,7 @@ func NewTelegramBot(
 	authService *service.AuthService,
 	inviteService *service.InviteService,
 	vpnService *service.VPNService,
+	repo repository.Repository, // Добавляем репозиторий в аргументы
 	logger *logrus.Logger,
 	admins []int64,
 ) (*TelegramBot, error) {
@@ -44,6 +47,7 @@ func NewTelegramBot(
 		vpnService:    vpnService,
 		logger:        logger,
 		admins:        admins,
+		repo:          repo, // Инициализируем репозиторий
 	}, nil
 }
 
@@ -199,6 +203,47 @@ func (b *TelegramBot) handleCommand(ctx context.Context, message *tgbotapi.Messa
 
 	default:
 		b.sendMessage(message.Chat.ID, "Неизвестная команда. Отправьте /help для получения списка команд.")
+	}
+}
+
+// handleConfigCommand обрабатывает команду /config
+func (b *TelegramBot) handleConfigCommand(ctx context.Context, chatID int64, user *models.User) {
+	// Проверяем, что у пользователя есть сертификат
+	if user.Certificate == "" {
+		b.sendMessage(chatID, "У вас нет настроенного сертификата. Сначала активируйте инвайт-код с помощью команды /invite.")
+		return
+	}
+
+	// Формируем конфигурационный файл для клиента OpenConnect
+	config := fmt.Sprintf(`# Eidolon VPN конфигурация OpenConnect
+# Имя: %s
+# Создано: %s
+
+server=vpn.example.com
+port=443
+protocol=tcp
+user=%s
+authgroup=Eidolon
+
+-----BEGIN CERTIFICATE-----
+%s
+-----END CERTIFICATE-----
+`, user.Username, time.Now().Format("02.01.2006 15:04:05"), user.Username, user.Certificate)
+
+	// Создаем документ для отправки
+	doc := tgbotapi.NewDocument(chatID, tgbotapi.FileBytes{
+		Name:  fmt.Sprintf("eidolon_config_%s.txt", user.Username),
+		Bytes: []byte(config),
+	})
+
+	// Добавляем описание
+	doc.Caption = "Конфигурация для OpenConnect VPN клиента"
+
+	// Отправляем файл конфигурации
+	_, err := b.bot.Send(doc)
+	if err != nil {
+		b.logger.Errorf("Failed to send config file: %v", err)
+		b.sendMessage(chatID, "Ошибка при отправке файла конфигурации.")
 	}
 }
 

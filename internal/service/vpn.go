@@ -427,3 +427,20 @@ func (s *VPNService) updateTrafficStats(ctx context.Context) {
 		}
 	}
 }
+
+// Добавьте эти методы в структуру VPNService
+
+// GetUserGroups возвращает список групп маршрутов пользователя
+func (s *VPNService) GetUserGroups(ctx context.Context, userID int64) ([]*models.RouteGroup, error) {
+	return s.repo.Route().GetUserGroups(ctx, userID)
+}
+
+// GetRoutesInGroup возвращает список маршрутов в группе
+func (s *VPNService) GetRoutesInGroup(ctx context.Context, groupID int64) ([]*models.Route, error) {
+	return s.repo.Route().GetRoutesInGroup(ctx, groupID)
+}
+
+// GetRouteGroup возвращает группу маршрутов по ID
+func (s *VPNService) GetRouteGroup(ctx context.Context, groupID int64) (*models.RouteGroup, error) {
+	return s.repo.Route().GetGroupByID(ctx, groupID)
+}

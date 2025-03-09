@@ -72,6 +72,17 @@ func main() {
 		log.Fatalf("Failed to load or create CA certificate: %v", err)
 	}
 
+	// Загружаем или создаем сертификат сервера
+	err = certManager.LoadOrCreateServerCert(vpn.CertOptions{
+		CommonName:   cfg.VPN.ServerCommonName,
+		Organization: cfg.VPN.Organization,
+		Country:      cfg.VPN.Country,
+		ValidForDays: 3650, // 10 лет
+	})
+	if err != nil {
+		log.Fatalf("Failed to load or create server certificate: %v", err)
+	}
+
 	// Создаем VPN сервер
 	vpnServer := vpn.NewOpenConnectServer(
 		vpn.WithListenIP(cfg.VPN.ListenIP),
@@ -87,27 +98,27 @@ func main() {
 	// Создаем сервисы
 	authService := service.NewAuthService(repo, cfg.JWT.Secret, time.Duration(cfg.JWT.ExpiryMinutes)*time.Minute)
 	inviteService := service.NewInviteService(repo)
-	routeService := service.NewRouteService(repo, log)
 	vpnService := service.NewVPNService(repo, vpnServer, certManager, log, cfg.VPN.DefaultRoutes, cfg.VPN.DefaultASNRoutes)
-	monitorService := service.NewMonitorService(repo, vpnService, log)
 
 	// Создаем и настраиваем API сервер
-	apiServer, err := api.NewServer(
-		cfg.API.ListenAddr,
+	serverConfig := api.ServerConfig{
+		Addr:            cfg.API.ListenAddr,
+		ReadTimeout:     time.Duration(cfg.API.ReadTimeout) * time.Second,
+		WriteTimeout:    time.Duration(cfg.API.WriteTimeout) * time.Second,
+		ShutdownTimeout: time.Duration(cfg.API.ShutdownTimeout) * time.Second,
+	}
+
+	apiServer := api.NewServer(
+		serverConfig,
 		authService,
 		inviteService,
 		vpnService,
-		routeService,
-		monitorService,
 		log,
 	)
-	if err != nil {
-		log.Fatalf("Failed to create API server: %v", err)
-	}
 
 	// Запускаем сервер в отдельной горутине
 	go func() {
-		if err := apiServer.Start(); err != nil {
+		if err := apiServer.Start(ctx); err != nil {
 			log.Fatalf("Failed to start API server: %v", err)
 		}
 	}()
