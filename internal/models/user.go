@@ -101,23 +101,6 @@ func (u *User) ParseCertificate() (*x509.Certificate, error) {
 	return cert, nil
 }
 
-// InviteCode представляет инвайт-код для добавления пользователей
-type InviteCode struct {
-	ID        int64     `json:"id" db:"id"`
-	Code      string    `json:"code" db:"code"`
-	CreatedBy int64     `json:"created_by" db:"created_by"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UsedBy    int64     `json:"used_by,omitempty" db:"used_by"`
-	UsedAt    time.Time `json:"used_at,omitempty" db:"used_at"`
-	Expired   bool      `json:"expired" db:"expired"`
-	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
-}
-
-// IsValid проверяет, действителен ли инвайт-код
-func (i *InviteCode) IsValid() bool {
-	return !i.Expired && i.UsedBy == 0 && time.Now().Before(i.ExpiresAt)
-}
-
 // UserTraffic представляет статистику трафика пользователя
 type UserTraffic struct {
 	ID        int64     `json:"id" db:"id"`
