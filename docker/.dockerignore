@@ -1,0 +1,32 @@
+# Игнорируем скомпилированные бинарники
+bin/
+*.exe
+*.out
+
+# Временные файлы
+tmp/
+*.tmp
+*.swp
+
+# Файлы IDE и редакторов
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# Локальные конфиги и данные
+config/local/
+data/
+db/*.db
+
+# Логи
+logs/
+*.log
+
+# Файлы Docker (чтобы не копировать их внутрь образа)
+Dockerfile
+docker-compose.yml
+.dockerignore
