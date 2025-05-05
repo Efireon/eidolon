@@ -33,13 +33,22 @@ func CallError(module, message string, err error) ModuleError {
 	}
 }
 
-//// Обработка ошибок из разных модулей
-
+// // Обработка ошибок из разных модулей
 // Обработка ошибок конфига
 func CallConfigError(msg string, err error) error {
 	return CallError("config", msg, err)
 }
 
+// Обработка ошибок main
 func CallMainError(msg string, err error) error {
 	return CallError("main", msg, err)
+}
+
+// Обработка ошибок OpenConnect
+func CallOpenConnectError(msg string, err error) error {
+	return CallError("openconnect", msg, err)
+}
+
+func CallUtilsError(msg string, err error) error {
+	return CallError("utils", msg, err)
 }

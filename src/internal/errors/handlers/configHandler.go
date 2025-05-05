@@ -10,8 +10,7 @@ import (
 	ers "eidolonVPN/internal/errors"
 )
 
-//// Обработка конкретных ошибок
-
+// Обработка конкретных ошибок
 func ConfigErrHandler(configName string, err error) error {
 	switch {
 	case errors.As(err, &viper.ConfigFileNotFoundError{}):
