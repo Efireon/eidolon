@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"syscall"
 
@@ -37,7 +38,8 @@ func OpenConnectErrHandler(err error) error {
 func OpenConnectConfigErrHandler(occfg string, err error) error {
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		return ers.CallOpenConnectError("OpenConnect config file not found, generated default", err)
+		log.Fatalf("Critical: failed to load yaml")
+		return nil
 	case errors.Is(err, fs.ErrPermission):
 		return ers.CallOpenConnectError("OpenConnect not enough permissions", err)
 	default:

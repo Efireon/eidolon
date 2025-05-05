@@ -34,4 +34,7 @@ func main() {
 	utils.DebugPrint(fmt.Sprintf("Main Config: %+v", mainConfig))
 
 	utils.DebugPrint(fmt.Sprintf("Service config containment: %s", mainConfig.Service.Host))
+
+	utils.DebugPrint(fmt.Sprintf("OCconfig: %s", OCconfig))
+
 }
