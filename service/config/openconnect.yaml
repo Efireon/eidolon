@@ -1,0 +1,66 @@
+# OpenConnect VPN Configuration
+
+server: "vpn.example.com"
+port: 443
+protocol: "udp"
+interface: "eidolon0"
+
+security:
+  ca_path: "/certs/ca/ca.crt"  # CA для серверной аутентификации
+  no_cert_check: false
+  allowed_ciphers:
+    - "AES256-SHA256"
+    - "AES128-SHA256"
+  disable_ipv6: false
+
+network:
+  mtu: 1400
+  dns_servers:
+    - "8.8.8.8"
+    - "8.8.4.4"
+  search_domains:
+    - "internal.example.com"
+  routes:
+    - "10.20.30.0/8" # Внутренняя сеть
+  exclude_routes:
+    - "127.0.0.0/8"    # Исключаем localhost
+  default_route: false
+
+debug:
+  verbose: 2
+  log_file: "/data/logs/openconnect.log"
+  timestamp: true
+  no_https: false
+
+
+# OpenConnect VPN Configuration
+
+server: "vpn.eidolon.internal"
+port: 443
+protocol: "udp"
+interface: "eidolon0"
+
+# OpenConnectConfig структура также должна быть упрощена
+
+security:
+  ca_path: "/certs/ca/ca.crt"  # CA certificate for server validation
+  no_cert_check: false
+  allowed_ciphers:
+    - "AES256-SHA256"
+    - "AES128-SHA256"
+  disable_ipv6: false
+
+network:
+  mtu: 1400
+  dns_servers:
+    - "100.64.0.1"  # Внутренний DNS сервера VPN
+    - "1.1.1.1"     # Публичный DNS
+  search_domains:
+    - "eidolon.local"
+  default_route: false # Split tunneling по умолчанию
+
+debug:
+  verbose: 2
+  log_file: "/data/logs/openconnect.log"
+  timestamp: true
+  no_https: false
