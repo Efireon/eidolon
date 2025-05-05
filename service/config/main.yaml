@@ -1,0 +1,27 @@
+service:
+  host: "0.0.0.0"
+  ports:
+    - 443
+    - 8080
+  name: "Eidolon VPN Service"
+  version: "1.0.0"
+
+logging:
+  level: "info"
+  format: "json"
+  paths:
+    access: "/data/logs/access"
+    error: "/data/logs/error"
+    debug: "/data/logs/debug"
+  max_size: 100  # в MB
+  max_backups: 7
+
+storage:
+  database_path: "/db/database.db"
+  data_dir: "/data"
+  temp_dir: "/tmp"
+  backup:
+    enabled: true
+    path: "/db/backups"
+    frequency: "daily"
+    max_backups: 14
