@@ -28,5 +28,10 @@ func LoadConfig(configName string, paths []string, cfg interface{}) error {
 		return handlers.ConfigErrHandler(configName, err)
 	}
 
+	err = v.Unmarshal(cfg)
+	if err != nil {
+		return handlers.ConfigErrHandler(configName, err)
+	}
+
 	return nil
 }
