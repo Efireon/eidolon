@@ -1,4 +1,4 @@
-package config
+package structures
 
 // MainConfig содержит основные настройки сервиса
 type MainConfig struct {
