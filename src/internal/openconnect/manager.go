@@ -3,97 +3,139 @@ package openconnect
 import (
 	"eidolonVPN/internal/config"
 	"eidolonVPN/internal/config/structures"
-	"eidolonVPN/internal/errors/handlers"
+	"eidolonVPN/internal/errors"
 	"fmt"
+	"io"
 	"os"
-	"strings"
+	"os/exec"
+	"sync"
+	"syscall"
 )
 
-// GenerateOCconfig генерирует файл конфигурации ocserv на основе YAML
-func GenerateOCconfig(sourcePath string, targetPath string) error {
+// Manager управляет процессом OpenConnect
+type Manager struct {
+	cmd        *exec.Cmd
+	config     structures.OpenConnectConfig
+	configPath string
+	running    bool
+	mutex      sync.Mutex
+	logWriter  io.Writer
+}
+
+// NewManager создает новый экземпляр менеджера OpenConnect
+func NewManager(configPath string) (*Manager, error) {
 	var ocConfig structures.OpenConnectConfig
 
-	// Используем LoadConfig
-	// Передаем название файла и путь для поиска
-	err := config.LoadConfig("openconnect", []string{sourcePath}, &ocConfig)
+	err := config.LoadConfig("openconnect", []string{"/eidolon/service/config"}, &ocConfig)
 	if err != nil {
-		return handlers.OpenConnectConfigErrHandler(sourcePath, err)
+		return nil, err
 	}
 
-	// Формируем содержимое файла ocserv
-	configContent := generateOCservConfig(ocConfig)
-
-	// Записываем файл
-	return os.WriteFile(targetPath, []byte(configContent), 0644)
+	return &Manager{
+		config:     ocConfig,
+		configPath: configPath,
+		running:    false,
+		logWriter:  os.Stdout, // По умолчанию логи в stdout
+	}, nil
 }
 
-// Генерация конфигурации ocserv.conf
-func generateOCservConfig(config structures.OpenConnectConfig) string {
-	var content string
+// Start запускает процесс OpenConnect
+func (m *Manager) Start() error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
-	// Основные параметры сервера
-	content += fmt.Sprintf("listen-host = %s\n", config.Server)
-	content += fmt.Sprintf("tcp-port = %d\n", config.Port)
-
-	if config.Protocol == "udp" {
-		content += fmt.Sprintf("udp-port = %d\n", config.Port)
+	if m.running {
+		return errors.CallOpenConnectError("Process already running", nil)
 	}
 
-	// Интерфейс
-	content += fmt.Sprintf("device = %s\n", config.Interface)
-
-	// Безопасность
-	if len(config.Security.AllowedCiphers) > 0 {
-		content += fmt.Sprintf("tls-priorities = %s\n",
-			strings.Join(config.Security.AllowedCiphers, ":"))
+	// Проверяем наличие конфигурации
+	exists, err := CheckOCconfig(m.configPath)
+	if err != nil || !exists {
+		// Генерируем конфигурацию, если она не существует или неверна
+		err = GenerateOCconfig("/eidolon/service/config", m.configPath)
+		if err != nil {
+			return err
+		}
 	}
 
-	if config.Security.CAPath != "" {
-		content += fmt.Sprintf("ca-cert = %s\n", config.Security.CAPath)
+	// Формируем команду запуска
+	m.cmd = exec.Command("openconnect", "--config", m.configPath)
+
+	// Настраиваем вывод логов
+	stdout, err := m.cmd.StdoutPipe()
+	if err != nil {
+		return errors.CallOpenConnectError("Failed to get stdout pipe", err)
 	}
 
-	// Сетевые настройки
-	content += fmt.Sprintf("mtu = %d\n", config.Network.MTU)
-
-	if len(config.Network.DNSServers) > 0 {
-		content += fmt.Sprintf("dns = %s\n",
-			strings.Join(config.Network.DNSServers, ", "))
+	stderr, err := m.cmd.StderrPipe()
+	if err != nil {
+		return errors.CallOpenConnectError("Failed to get stderr pipe", err)
 	}
 
-	if len(config.Network.SearchDomains) > 0 {
-		content += fmt.Sprintf("search-domains = %s\n",
-			strings.Join(config.Network.SearchDomains, ", "))
+	// Объединяем stdout и stderr в один writer
+	go io.Copy(m.logWriter, stdout)
+	go io.Copy(m.logWriter, stderr)
+
+	// Запускаем процесс
+	err = m.cmd.Start()
+	if err != nil {
+		return errors.CallOpenConnectError("Failed to start OpenConnect", err)
 	}
 
-	// Маршруты
-	for _, route := range config.Network.Routes {
-		content += fmt.Sprintf("route = %s\n", route)
-	}
+	m.running = true
 
-	for _, exclude := range config.Network.ExcludeRoutes {
-		content += fmt.Sprintf("no-route = %s\n", exclude)
-	}
+	// Запускаем горутину для отслеживания завершения процесса
+	go func() {
+		err := m.cmd.Wait()
+		m.mutex.Lock()
+		m.running = false
+		m.mutex.Unlock()
 
-	// Отладка
-	content += fmt.Sprintf("log-level = %d\n", config.Debug.Verbose)
-	if config.Debug.LogFile != "" {
-		content += fmt.Sprintf("log-file = %s\n", config.Debug.LogFile)
-	}
+		if err != nil {
+			fmt.Printf("OpenConnect process exited with error: %v\n", err)
+		} else {
+			fmt.Println("OpenConnect process exited normally")
+		}
+	}()
 
-	return content
+	return nil
 }
 
-// CheckOCconfig проверяет существование и валидность конфигурации
-func CheckOCconfig(configPath string) (bool, error) {
-	// Проверяем существование файла
-	// Сравниваем с эталонной конфигурацией
-	// Возвращаем результат
-	return false, nil
+// Stop останавливает процесс OpenConnect
+func (m *Manager) Stop() error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if !m.running {
+		return errors.CallOpenConnectError("Process not running", nil)
+	}
+
+	// Посылаем SIGTERM для graceful shutdown
+	err := m.cmd.Process.Signal(syscall.SIGTERM)
+	if err != nil {
+		// Если не удалось послать SIGTERM, принудительно завершаем
+		err = m.cmd.Process.Kill()
+		if err != nil {
+			return errors.CallOpenConnectError("Failed to kill process", err)
+		}
+	}
+
+	// Статус обновится в горутине Wait
+	return nil
 }
 
-// SearchOCconfig ищет файл конфигурации по указанному пути
-func SearchOCconfig(searchPath string) (string, error) {
-	// Ищем файл в указанной директории
-	// Возвращаем путь или ошибку
-	return "", os.ErrNotExist
+// IsRunning проверяет, запущен ли процесс
+func (m *Manager) IsRunning() bool {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	return m.running
+}
+
+// SetLogWriter устанавливает writer для вывода логов
+func (m *Manager) SetLogWriter(writer io.Writer) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.logWriter = writer
 }

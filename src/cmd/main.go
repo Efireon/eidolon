@@ -6,6 +6,7 @@ import (
 	"eidolonVPN/internal/errors/handlers"
 	"eidolonVPN/internal/openconnect"
 	"eidolonVPN/internal/utils"
+	"os"
 
 	"fmt"
 	"log"
@@ -23,9 +24,18 @@ func main() {
 		log.Fatalf("Critical: failed to load main config: %v", err)
 	}
 
-	OCconfig, err := openconnect.SearchOCconfig("/etc/ocserv/ocserv.conf")
+	OCconfig, err := openconnect.SearchOCconfig("/eidolon/service/ocserv/ocserv.conf")
 	if err != nil {
-		handlers.OpenConnectConfigErrHandler(OCconfig, err)
+		// Создаем директорию, если ее нет
+		os.MkdirAll("/etc/ocserv", 0755)
+
+		// Генерируем конфигурацию
+		err = openconnect.GenerateOCconfig("/eidolon/service/config", "/eidolon/service/ocserv/ocserv.conf")
+		if err != nil {
+			handlers.OpenConnectFileErrHandler(OCconfig, err)
+		} else {
+			utils.DebugPrint("Generated new OpenConnect configuration")
+		}
 	}
 
 	// Времнные дебаги для теста контейнера

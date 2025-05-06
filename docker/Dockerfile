@@ -24,6 +24,9 @@ RUN apk add openconnect
 # Создаем пользователя для безопасности
 RUN adduser -D -g '' eidolon
 
+# Даём права на работу с директорией
+RUN chown -R eidolon:eidolon /eidolon/
+
 # Копируем скомпилированный бинарник из builder stage
 COPY --from=builder /build/eidolon /usr/local/bin/
 

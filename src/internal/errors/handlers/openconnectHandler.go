@@ -35,13 +35,24 @@ func OpenConnectErrHandler(err error) error {
 	}
 }
 
-func OpenConnectConfigErrHandler(occfg string, err error) error {
+func OpenConnectYamlErrHandler(msg string, err error) error {
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		log.Fatalf("Critical: failed to load yaml")
 		return nil
 	case errors.Is(err, fs.ErrPermission):
 		return ers.CallOpenConnectError("OpenConnect not enough permissions", err)
+	default:
+		return ers.CallOpenConnectError(fmt.Sprintf("Unexpected error: %v", err), err)
+	}
+}
+
+func OpenConnectFileErrHandler(msg string, err error) error {
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return ers.CallOpenConnectError("OpenConnect missing file configuration", err)
+	case errors.Is(err, fs.ErrPermission):
+		return ers.CallOpenConnectError("Cannot open file, not enough permissions", err)
 	default:
 		return ers.CallOpenConnectError(fmt.Sprintf("Unexpected error: %v", err), err)
 	}
