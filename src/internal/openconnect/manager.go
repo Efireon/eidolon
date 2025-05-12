@@ -59,7 +59,7 @@ func (m *Manager) Start() error {
 	}
 
 	// Формируем команду запуска
-	m.cmd = exec.Command("openconnect", "--config", m.configPath)
+	m.cmd = exec.Command("ocserv", "-c", m.configPath)
 
 	// Настраиваем вывод логов
 	stdout, err := m.cmd.StdoutPipe()

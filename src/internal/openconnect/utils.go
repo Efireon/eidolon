@@ -1,13 +1,22 @@
 package openconnect
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"eidolonVPN/internal/config"
 	"eidolonVPN/internal/config/structures"
 	"eidolonVPN/internal/errors"
 	"eidolonVPN/internal/errors/handlers"
+	"encoding/pem"
 	"fmt"
+	"math/big"
+	"net"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 // GenerateOCconfig генерирует файл конфигурации ocserv на основе YAML
@@ -33,7 +42,14 @@ func generateOCservConfig(config structures.OpenConnectConfig) string {
 	var content string
 
 	// Основные параметры сервера
-	content += fmt.Sprintf("listen-host = %s\n", config.Server)
+	// Авторизация
+	if strings.Contains(config.Security.Auth, "pam") {
+		content += fmt.Sprintf("enable-auth = \"%s\"\n", "gssapi")
+		content += fmt.Sprintf("auth = \"%s\"\n", config.Security.Auth)
+	} else {
+		content += fmt.Sprintf("auth = \"%s\"\n", config.Security.Auth)
+	}
+
 	content += fmt.Sprintf("tcp-port = %d\n", config.Port)
 
 	if config.Protocol == "udp" {
@@ -42,6 +58,9 @@ func generateOCservConfig(config structures.OpenConnectConfig) string {
 
 	// Интерфейс
 	content += fmt.Sprintf("device = %s\n", config.Interface)
+
+	// Сокет
+	content += fmt.Sprintf("socket-file = \"%s\"\n", config.Socket)
 
 	// Безопасность
 	if len(config.Security.AllowedCiphers) > 0 {
@@ -54,16 +73,13 @@ func generateOCservConfig(config structures.OpenConnectConfig) string {
 	}
 
 	// Сетевые настройки
+	content += fmt.Sprintf("default-domain = \"%s\"\n", config.Server)
+
 	content += fmt.Sprintf("mtu = %d\n", config.Network.MTU)
 
 	if len(config.Network.DNSServers) > 0 {
 		content += fmt.Sprintf("dns = %s\n",
 			strings.Join(config.Network.DNSServers, ", "))
-	}
-
-	if len(config.Network.SearchDomains) > 0 {
-		content += fmt.Sprintf("search-domains = %s\n",
-			strings.Join(config.Network.SearchDomains, ", "))
 	}
 
 	// Маршруты
@@ -155,4 +171,100 @@ func SearchOCconfig(searchPath string) (string, error) {
 
 	// Если не нашли, возвращаем ошибку
 	return "", os.ErrNotExist
+}
+
+// Генерация ssl сертификата
+func GenerateSSLcert(path string) (string, string, error) {
+	var config structures.OpenConnectConfig
+
+	// Проверяем, существуют ли уже сертификаты
+	certPath := filepath.Join(path, config.Security.CACert)
+	keyPath := filepath.Join(path, config.Security.CAKey)
+
+	if _, err := os.Stat(certPath); err == nil {
+		if _, err := os.Stat(keyPath); err == nil {
+			return certPath, keyPath, nil // Оба файла существуют
+		}
+	}
+
+	// Создаем директорию, если она не существует
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return "", "", err
+	}
+
+	// Генерируем приватный ключ RSA
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Сериализуем приватный ключ в PEM
+	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return "", "", err
+	}
+	defer keyOut.Close()
+
+	err = pem.Encode(keyOut, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	// Создаем шаблон сертификата
+	notBefore := time.Now()
+	notAfter := notBefore.Add(10 * 365 * 24 * time.Hour) // 10 лет
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return "", "", err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{config.Name},
+			CommonName:   config.Server,
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+		DNSNames:              []string{"localhost", config.Server},
+	}
+
+	// Самоподписанный сертификат (CA и серверный сертификат в одном)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Сериализуем сертификат в PEM
+	certOut, err := os.Create(certPath)
+	if err != nil {
+		return "", "", err
+	}
+	defer certOut.Close()
+
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		return "", "", err
+	}
+
+	// Установка прав доступа
+	if err := os.Chmod(keyPath, 0600); err != nil {
+		return "", "", err
+	}
+
+	if err := os.Chmod(certPath, 0644); err != nil {
+		return "", "", err
+	}
+
+	return certPath, keyPath, nil
 }

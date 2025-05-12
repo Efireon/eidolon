@@ -2,10 +2,12 @@ package structures
 
 // База OpenConnect конфига
 type OpenConnectConfig struct {
+	Name      string         `yaml:"name" mapstructure:"name"`
 	Server    string         `yaml:"server" mapstructure:"server"`
 	Port      int            `yaml:"port" mapstructure:"port"`
 	Protocol  string         `yaml:"protocol" mapstructure:"protocol"`   // udp/tcp
 	Interface string         `yaml:"interface" mapstructure:"interface"` // tun интерфейс
+	Socket    string         `yaml:"socket" mapstructure:"socket"`
 	Security  SecurityConfig `yaml:"security" mapstructure:"security"`
 	Network   NetworkConfig  `yaml:"network" mapstructure:"network"`
 	Debug     DebugConfig    `yaml:"debug" mapstructure:"debug"`
@@ -15,7 +17,10 @@ type OpenConnectConfig struct {
 type SecurityConfig struct {
 	CertPath       string   `yaml:"cert_path" mapstructure:"cert_path"`
 	KeyPath        string   `yaml:"key_path" mapstructure:"key_path"`
+	Auth           string   `yaml:"auth" mapstructure:"auth"`
 	CAPath         string   `yaml:"ca_path" mapstructure:"ca_path"`
+	CACert         string   `yaml:"ca_cert" mapstructure:"ca_cert"`
+	CAKey          string   `yaml:"ca_key" mapstructure:"ca_key"`
 	NoCertCheck    bool     `yaml:"no_cert_check" mapstructure:"no_cert_check"`
 	AllowedCiphers []string `yaml:"allowed_ciphers" mapstructure:"allowed_ciphers"`
 	DisableIPv6    bool     `yaml:"disable_ipv6" mapstructure:"disable_ipv6"`
