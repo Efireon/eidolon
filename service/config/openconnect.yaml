@@ -1,14 +1,14 @@
 # OpenConnect VPN Configuration
 
 name: "Eidolon VPN"
-server: "vpn.example.com"
+server: "eidolonvpn.com"
 port: 443
 protocol: "udp"
 interface: "eidolon0"
 socket: "/run/ocserv.socket"
 
 security:
-  auth: "plain[passwd=/etc/ocserv/ocpasswd]"
+  auth: "plain[passwd=/eidolon/service/tmp/passwds]"
   ca_path: "/eidolon/service/certs/"  # CA для серверной аутентификации
   ca_cert: "server-cert.pem"
   ca_key: "server-key.pem"
@@ -20,6 +20,8 @@ security:
 
 network:
   mtu: 1400
+  lan: "10.20.30.0"
+  lan_mask: "255.255.255.0"
   dns_servers:
     - "8.8.8.8"
     - "8.8.4.4"

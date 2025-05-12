@@ -69,11 +69,17 @@ func generateOCservConfig(config structures.OpenConnectConfig) string {
 	}
 
 	if config.Security.CAPath != "" {
-		content += fmt.Sprintf("ca-cert = %s\n", config.Security.CAPath)
+		content += fmt.Sprintf("server-cert = %s%s\n", config.Security.CAPath, config.Security.CACert)
+	}
+	if config.Security.CAPath != "" {
+		content += fmt.Sprintf("server-key = %s%s\n", config.Security.CAPath, config.Security.CAKey)
 	}
 
 	// Сетевые настройки
 	content += fmt.Sprintf("default-domain = \"%s\"\n", config.Server)
+
+	content += fmt.Sprintf("ipv4-network = %s\n", config.Network.LAN)
+	content += fmt.Sprintf("ipv4-netmask = %s\n", config.Network.LANMask)
 
 	content += fmt.Sprintf("mtu = %d\n", config.Network.MTU)
 
@@ -175,11 +181,16 @@ func SearchOCconfig(searchPath string) (string, error) {
 
 // Генерация ssl сертификата
 func GenerateSSLcert(path string) (string, string, error) {
-	var config structures.OpenConnectConfig
+	// Загрузка конфигурации
+	var ocConfig structures.OpenConnectConfig
+	err := config.LoadConfig("openconnect", []string{"/eidolon/service/config"}, &ocConfig)
+	if err != nil {
+		return "", "", err
+	}
 
 	// Проверяем, существуют ли уже сертификаты
-	certPath := filepath.Join(path, config.Security.CACert)
-	keyPath := filepath.Join(path, config.Security.CAKey)
+	certPath := filepath.Join(path, ocConfig.Security.CACert)
+	keyPath := filepath.Join(path, ocConfig.Security.CAKey)
 
 	if _, err := os.Stat(certPath); err == nil {
 		if _, err := os.Stat(keyPath); err == nil {
@@ -226,8 +237,8 @@ func GenerateSSLcert(path string) (string, string, error) {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{config.Name},
-			CommonName:   config.Server,
+			Organization: []string{ocConfig.Name},
+			CommonName:   ocConfig.Server,
 		},
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
@@ -236,7 +247,7 @@ func GenerateSSLcert(path string) (string, string, error) {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
-		DNSNames:              []string{"localhost", config.Server},
+		DNSNames:              []string{"localhost", ocConfig.Server},
 	}
 
 	// Самоподписанный сертификат (CA и серверный сертификат в одном)

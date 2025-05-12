@@ -29,6 +29,8 @@ type SecurityConfig struct {
 // Настройки сети
 type NetworkConfig struct {
 	MTU           int      `yaml:"mtu" mapstructure:"mtu"`
+	LAN           string   `yaml:"lan" mapstructure:"lan"`
+	LANMask       string   `yaml:"lan_mask" mapstructure:"lan_mask"`
 	DNSServers    []string `yaml:"dns_servers" mapstructure:"dns_servers"`
 	SearchDomains []string `yaml:"search_domains" mapstructure:"search_domains"`
 	Routes        []string `yaml:"routes" mapstructure:"routes"`

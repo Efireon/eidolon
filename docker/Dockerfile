@@ -26,12 +26,14 @@ FROM alpine:latest
 # Устанавливаем необходимые пакеты
 RUN apk add --no-cache ca-certificates \
     gnutls \
+    gnutls-utils \
     libev \
     libseccomp \
     libnl3 \
     protobuf-c \
     lz4-libs \
     readline \
+    openssl \
     linux-pam
 
 # Создаем пользователя для безопасности
